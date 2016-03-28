@@ -1,6 +1,6 @@
 #######################################################################
 
-# Description: Merge (voc and hsv) graphs and rerank the retrieval results by performing 
+# Description: Merge (voc and hsv) graphs and rerank the retrieval results by performing
 # a localized PageRank algorithm or find the weighted maximum density subgraph centered at the query image.
 # Details in Section 3.3-3.5 of the following paper:
 # Shaoting Zhang, Ming Yang, Timothee Cour, Kai Yu, Dimitris N. Metaxas: Query Specific Fusion for Image Retrieval. ECCV (2) 2012: 660-673
@@ -15,6 +15,7 @@ import numpy
 import cPickle
 import re
 import copy
+import os
 
 class GraphFusion:
 
@@ -40,7 +41,7 @@ class GraphFusion:
         sorted_keys = list(numpy.sort(all_keys))
         if -1 in sorted_keys:
             sorted_keys.remove(-1) # one key is -1
-        matrix_size = numpy.size(sorted_keys) 
+        matrix_size = numpy.size(sorted_keys)
         Laplacian = numpy.zeros([matrix_size, matrix_size])
         for cur_key in sorted_keys:
             if cur_key == -1:
@@ -91,7 +92,7 @@ class GraphFusion:
 
         return selected_images[0:retri_amount]
 
-        
+
     ########### Method 2: find the weighted maximum density subgraph ###########
     def Fusion_Density_Subgraph(self, graph_list, num_ranks, retri_amount):
 
@@ -137,17 +138,18 @@ class GraphFusion:
 
         return selected_images[0:retri_amount]
 
-                
+
 #########################################################
-    
+
 if __name__ == "__main__":
 
-    fn_graph_list = 'data/ukbench_graph_list.txt'
+    data_directory = os.path.join(os.path.dirname(__file__),'../data')
+    fn_graph_list = data_directory + '/ukbench_graph_list.txt'
     fd_stdin = open(fn_graph_list)
 
-    fn_fusion_result = 'data/ukbench_graph_fusion_results.txt'
+    fn_fusion_result = data_directory + '/ukbench_graph_fusion_results.txt'
     fd_stdin_fusion = open(fn_fusion_result, 'w')
-    fn_label = 'data/ukbench_list_images_labels.txt'
+    fn_label = data_directory + '/ukbench_list_images_labels.txt'
 
     graphfusion = GraphFusion()
 
@@ -156,11 +158,11 @@ if __name__ == "__main__":
 
     graph_list = []
     count = 1
-    
+
     for line in fd_stdin:
         line = line.rstrip()
         line = line.split()
-        fn_graph = line[0]
+        fn_graph = data_directory + line[0]
 
         if numpy.mod(count, num_ranks) != 0:
             graph_list.append(cPickle.load(open(fn_graph, 'rb')))
@@ -169,21 +171,21 @@ if __name__ == "__main__":
         else:
             graph_list.append(cPickle.load(open(fn_graph, 'rb')))
             count += 1
-            
+
         graph_list_copy = copy.deepcopy(graph_list)
         selected_images = graphfusion.Fusion_Density_Subgraph(graph_list_copy, num_ranks, retri_amount)
         # Uncomment the next line to use PageRank-based method, but keep the above line as well. We need "selected_images[0]" to define the center of the graph
-        #selected_images = graphfusion.Fusion_Graph_Laplacian(graph_list, num_ranks, retri_amount, selected_images[0]) 
+        #selected_images = graphfusion.Fusion_Graph_Laplacian(graph_list, num_ranks, retri_amount, selected_images[0])
 
         fd_stdin_fusion.write(line[0] + ' ')
         for img_id in selected_images:
             fd_stdin_fusion.write(str(img_id) + ' ')
 
         fd_stdin_fusion.write('\n')
-        graph_list = [] 
+        graph_list = []
 
     fd_stdin_fusion.close()
-        
+
     import evaluate
     print "After fusing VOC and HSV graphs:"
     evaluate.Evaluate(fn_label, fn_fusion_result, retri_amount-2)

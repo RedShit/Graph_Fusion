@@ -1,7 +1,7 @@
 #######################################################################
 
-# Description: Build a graph for the retrieval rank of each query image. 
-# Reciprocal k-nearest neighbors and Jaccard similarity are used as rules to build these graphs. 
+# Description: Build a graph for the retrieval rank of each query image.
+# Reciprocal k-nearest neighbors and Jaccard similarity are used as rules to build these graphs.
 # Details in Section 3.2 of the following paper:
 # Shaoting Zhang, Ming Yang, Timothee Cour, Kai Yu, Dimitris N. Metaxas: Query Specific Fusion for Image Retrieval. ECCV (2) 2012: 660-673
 # (Also refer to the "Qin. et al., Hello neighbor: Accurate object retrieval with k-reciprocal nearest neighbors, CVPR'11" for reciprocal kNN)
@@ -15,11 +15,11 @@
 import numpy
 import cPickle
 import re
+import os
 
 ############################## Load data ##############################
 
 def load_data(fn_result):
-
     print "Load data"
     fd_stdin = open(fn_result)
     img_name = []
@@ -34,19 +34,21 @@ def load_data(fn_result):
     #print numpy.shape(result_idx)
     result_length = len(result_idx)
     fd_stdin.close()
-    
+
     return img_name, result_idx, result_length
 
 ############################## Reciprocal neighbors ###################
 
-def find_reciprocal_neighbors(img_name, result_idx, result_length, fn_result_reranking, fn_folder_graph, search_region, kNN, retri_amount, feature_type):
+def find_reciprocal_neighbors(img_name, result_idx, result_length,
+                              fn_result_reranking, fn_folder_graph,
+                              search_region, kNN, retri_amount, feature_type):
 
     print "Find reciprocal neighbors"
-    
+
     fd_stdin_result = open(fn_result_reranking, 'w')
 
     # build a reciprocal neighbor graph for each image
-    for i in range(result_length): 
+    for i in range(result_length):
         result_graph = {}
 
         # 1st layer: choose reciprocal neighbors only
@@ -59,7 +61,7 @@ def find_reciprocal_neighbors(img_name, result_idx, result_length, fn_result_rer
             cur_id_kNN = result_idx[cur_id][1:kNN]
             if result_idx[i][0] in cur_id_kNN:
                 qualified_list.append(cur_id)
-                
+
                 (result_graph[result_idx[i][0]]).append([cur_id, 1.0])
                 result_graph[cur_id] = [[result_idx[i][0], 1.0]]
 
@@ -98,36 +100,38 @@ def find_reciprocal_neighbors(img_name, result_idx, result_length, fn_result_rer
         for cur_id in qualified_list:
             fd_stdin_result.write(str(cur_id) + ' ')
         fd_stdin_result.write('\n')
-        
+
         # save graph files for each image
         #img_name_tmp = (img_name[i].split('/'))[-1]
         img_name_tmp = str(true_label)
         fn_graph = fn_folder_graph + img_name_tmp + feature_type
         cPickle.dump(result_graph, open(fn_graph, 'wb'))
-        
+
 
     fd_stdin_result.close()
 
 if __name__=='__main__':
 
-    #fn_result = 'data/ukbench_rank_voc.txt'
-    fn_result = 'data/ukbench_rank_hsv3d.txt'
-    #fn_result_reranking = 'data/ukbench_rerank_voc.txt'
-    fn_result_reranking = 'data/ukbench_rerank_hsv3d.txt'
-    fn_label = 'data/ukbench_list_images_labels.txt'
-    fn_folder_graph = 'data/uk_bench_graphs/'
-    
-    # Parameter setting, 
-    # smaller value for "tight graphs" such as ukbench (i.e., nearly-duplicate), 
+    data_directory = os.path.join(os.path.dirname(__file__),'../data')
+
+    fn_result = data_directory + '/ukbench_rank_voc.txt'
+    #fn_result = data_directory + '/ukbench_rank_hsv3d.txt'
+    fn_result_reranking = data_directory + '/ukbench_rerank_voc.txt'
+    #fn_result_reranking = data_directory + '/ukbench_rerank_hsv3d.txt'
+    fn_label = data_directory + '/ukbench_list_images_labels.txt'
+    fn_folder_graph = data_directory + '/uk_bench_graphs/'
+
+    # Parameter setting,
+    # smaller value for "tight graphs" such as ukbench (i.e., nearly-duplicate),
     # larger for "loose graphs" such as corel (i.e., category classification)
     # okay to choose same values for search_range and kNN. very subtle difference
     search_region = 6
     kNN = 4
-    retri_amount = 25    
+    retri_amount = 25
 
     # Load data (retrieval results for all images)
     img_name, result_idx, result_length = load_data(fn_result)
-    
+
     # Generate reciprocal graphs for all images
     if re.search('voc', fn_result):
         feature_type = '.voc'
@@ -138,13 +142,13 @@ if __name__=='__main__':
     else:
         feature_type = '.unknown'
 
-    find_reciprocal_neighbors(img_name, result_idx, result_length, fn_result_reranking, fn_folder_graph, search_region, kNN, retri_amount, feature_type)
-    
-    # Evaluate the accuracy	
+    find_reciprocal_neighbors(img_name, result_idx, result_length,
+                              fn_result_reranking, fn_folder_graph,
+                              search_region, kNN, retri_amount, feature_type)
+
+    # Evaluate the accuracy
     import evaluate
     print "Before building reciprocal kNN graphs:"
     evaluate.Evaluate(fn_label, fn_result, retri_amount-2)
     print "After building reciprocal kNN graphs:"
     evaluate.Evaluate(fn_label, fn_result_reranking, retri_amount-2)
-
-
