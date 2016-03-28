@@ -114,10 +114,10 @@ if __name__=='__main__':
 
     data_directory = os.path.join(os.path.dirname(__file__),'../data')
 
-    fn_result = data_directory + '/ukbench_rank_voc.txt'
-    #fn_result = data_directory + '/ukbench_rank_hsv3d.txt'
-    fn_result_reranking = data_directory + '/ukbench_rerank_voc.txt'
-    #fn_result_reranking = data_directory + '/ukbench_rerank_hsv3d.txt'
+    #fn_result = data_directory + '/ukbench_rank_voc.txt'
+    fn_result = data_directory + '/ukbench_rank_hsv3d.txt'
+    #fn_result_reranking = data_directory + '/ukbench_rerank_voc.txt'
+    fn_result_reranking = data_directory + '/ukbench_rerank_hsv3d.txt'
     fn_label = data_directory + '/ukbench_list_images_labels.txt'
     fn_folder_graph = data_directory + '/uk_bench_graphs/'
 
